@@ -17,18 +17,20 @@ import (
 func main() {
 	keyService := keystore.NewInMemoryKeyStore()
 	encryptionService := encryption.NewAESService(keyService)
-	storageService := storage.NewLocalStorage("", "", encryptionService)
+	storageService := storage.NewLocalStorage("temp/", "vault/", encryptionService)
 	err := storageService.Initialise(context.Background())
 
 	if err != nil {
 		panic(err)
 	}
 
-	sqlite, err := db.NewSQLiteDatabase("")
+	sqlite, err := db.NewSQLiteDatabase("filer.db")
 
 	if err != nil {
 		panic(err)
 	}
+
+	sqlite.CreateTable()
 
 	filingService := db.NewSqliteFilerService(sqlite)
 	fmt.Println(filingService)
