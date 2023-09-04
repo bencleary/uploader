@@ -2,6 +2,8 @@ package uploader
 
 import (
 	"mime/multipart"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -18,4 +20,23 @@ type Attachment struct {
 	PreviewLocalPath string
 }
 
-type AttachmentService interface{}
+func getFileExtension(filename string) string {
+	ext := filepath.Ext(filename)
+	ext = strings.TrimPrefix(ext, ".")
+	return ext
+}
+
+func NewAttachment(file *multipart.FileHeader, requestUser int) *Attachment {
+	uid, err := uuid.NewUUID()
+	if err != nil {
+		return nil
+	}
+	return &Attachment{
+		UID:       uid,
+		OwnerID:   requestUser,
+		FileSize:  file.Size,
+		FileName:  file.Filename,
+		Extension: getFileExtension(file.Filename),
+		MimeType:  file.Header.Get("Content-Type"),
+	}
+}

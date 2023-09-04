@@ -1,6 +1,7 @@
 package scaler
 
 import (
+	"context"
 	"image"
 	"os"
 
@@ -14,6 +15,8 @@ const (
 	GIF  = "image/gif"
 	JPEG = "image/jpeg"
 )
+
+var _ uploader.ScalerService = (*DrawImageScaler)(nil)
 
 type DrawImageScaler struct {
 	supported []string
@@ -46,13 +49,13 @@ func getImageFormat(mimeType string) (uploader.ImageFormat, error) {
 	return nil, nil
 }
 
-func (d *DrawImageScaler) Scale(inputPath string, targetWidth int) error {
+func (d *DrawImageScaler) Scale(ctx context.Context, filePath string, targetWidth int) error {
 	format, err := getImageFormat("")
 	if err != nil {
 		return err
 	}
 	// Open input image file
-	input, err := os.Open(inputPath)
+	input, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
@@ -74,7 +77,7 @@ func (d *DrawImageScaler) Scale(inputPath string, targetWidth int) error {
 	targetHeight := int(float64(targetWidth) / aspectRatio)
 
 	// Create output image file
-	output, err := os.Create(inputPath)
+	output, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
