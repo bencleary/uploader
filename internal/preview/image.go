@@ -6,10 +6,6 @@ import (
 	"github.com/bencleary/uploader"
 )
 
-const (
-	MAX_PREVIEW_WIDTH = 320
-)
-
 var _ uploader.PreviewGeneratorService = (*ImagePreviewGenerator)(nil)
 
 type ImagePreviewGenerator struct {
@@ -22,13 +18,6 @@ func NewImagePreviewGenerator(scaler uploader.ScalerService) *ImagePreviewGenera
 	}
 }
 
-func (i *ImagePreviewGenerator) Generate(ctx context.Context, attachment *uploader.Attachment) error {
-	return nil
-	// format, err := resize.GetImageFormat(attachment.MimeType)
-	// if err != nil {
-	// 	return err
-	// }
-	// resizer := resize.NewResizerService()
-	// previewPath := strings.Join([]string{attachment.VaultPath, "preview"}, ".")
-	// return resizer.Resize(attachment.VaultPath, previewPath, MAX_PREVIEW_WIDTH, format)
+func (i *ImagePreviewGenerator) Generate(ctx context.Context, attachment *uploader.Attachment, previewWidth int) error {
+	return i.Scaler.Scale(ctx, attachment, previewWidth)
 }

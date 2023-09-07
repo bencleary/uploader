@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/bencleary/uploader"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/net/context"
+)
+
+const (
+	MAX_IMAGE_WIDTH = 2000
+	PREVIEW_WIDTH   = 320
 )
 
 func (s *Server) upload(c echo.Context) error {
@@ -20,47 +25,47 @@ func (s *Server) upload(c echo.Context) error {
 		return err
 	}
 
-	attachment := uploader.NewAttachment(file, 1)
+	attachment, err := s.storage.Hold(context.Background(), file)
 
 	if err != nil {
 		return err
 	}
 
-	// vaultPath, err := s.storage.Hold(attachment)
-	// filePath := strings.Join([]string{vaultPath, attachment.FileName}, "/")
-	// attachment.VaultPath = filePath
+	// Virus scanning
 
-	// // Virus scanning
+	// err := s.filer.Scan(filePath)
+	if err != nil {
+		// virus validation failed...
+		return err
+	}
 
-	// // err := s.filer.Scan(filePath)
-	// if err != nil {
-	// 	// virus validation failed...
-	// 	return err
-	// }
+	if s.scaler.Supported(attachment.MimeType) {
+		err := s.scaler.Scale(context.Background(), attachment, MAX_IMAGE_WIDTH)
+		if err != nil {
+			return err
+		}
+	}
 
-	// // if strings.Contains(attachment.MimeType, IMAGE_MIMETYPE) {
-	// // 	r := resize.NewResizerService()
+	// TODO - fix overwriting file, create new preview
+	err = s.preview.Generate(context.Background(), attachment, PREVIEW_WIDTH)
 
-	// // 	format, err := resize.GetImageFormat(attachment.MimeType)
-	// // 	if err != nil {
-	// // 		return err
-	// // 	}
-	// // 	r.Resize(filePath, filePath, MAX_IMAGE_WIDTH, format)
-	// // }
+	if err != nil {
+		return err
+	}
 
-	// err = s.preview.Generate(attachment)
+	err = s.storage.Save(context.Background(), attachment, key)
 
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		// writing files has failed
+		return err
+	}
 
-	// err = s.storage.Save(filePath, attachment, key)
-	// // err = s.filer.Store(filePath, attachment, key)
+	err = s.filer.Record(attachment)
 
-	// if err != nil {
-	// 	// writing files has failed
-	// 	return err
-	// }
+	if err != nil {
+		// writing files has failed
+		return err
+	}
 
 	return c.JSON(http.StatusOK, map[string]string{"uid": attachment.UID.String()})
 }

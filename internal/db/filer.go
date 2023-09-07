@@ -11,13 +11,13 @@ type SqliteFiler struct {
 	db *DB
 }
 
-func NewSqliteFilerService(db *DB) SqliteFiler {
-	return SqliteFiler{
+func NewSqliteFilerService(db *DB) *SqliteFiler {
+	return &SqliteFiler{
 		db: db,
 	}
 }
 
-func (s SqliteFiler) Record(attachment *uploader.Attachment) error {
+func (s *SqliteFiler) Record(attachment *uploader.Attachment) error {
 	_, err := s.db.db.Exec(`
 		INSERT INTO uploads (uuid, owner_id, file_name, file_size, extension, mime_type)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -28,10 +28,10 @@ func (s SqliteFiler) Record(attachment *uploader.Attachment) error {
 	return nil
 }
 
-func (s SqliteFiler) Fetch(fileUID uuid.UUID) (*uploader.Upload, error) {
+func (s *SqliteFiler) Fetch(fileUID uuid.UUID) (*uploader.Upload, error) {
 	return nil, nil
 }
 
-func (s SqliteFiler) Delete(fileUID uuid.UUID) error {
+func (s *SqliteFiler) Delete(fileUID uuid.UUID) error {
 	return nil
 }

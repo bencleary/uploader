@@ -10,10 +10,11 @@ type Server struct {
 	http    *echo.Echo
 	filer   uploader.FilerService
 	storage uploader.StorageService
+	scaler  uploader.ScalerService
 	preview *uploader.PreviewService
 }
 
-func NewServer(filer uploader.FilerService, storage uploader.StorageService, preview *uploader.PreviewService) *Server {
+func NewServer(filer uploader.FilerService, storage uploader.StorageService, scaler uploader.ScalerService, preview *uploader.PreviewService) *Server {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -22,6 +23,7 @@ func NewServer(filer uploader.FilerService, storage uploader.StorageService, pre
 		http:    e,
 		filer:   filer,
 		storage: storage,
+		scaler:  scaler,
 		preview: preview,
 	}
 

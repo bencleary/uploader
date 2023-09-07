@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 
@@ -61,13 +62,13 @@ func (l *LocalStorage) Initialise(ctx context.Context) error {
 	return nil
 }
 
-func (l *LocalStorage) Hold(ctx context.Context, attachment *uploader.Attachment) (string, error) {
+func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*uploader.Attachment, error) {
 	vaultID, err := uuid.NewUUID()
 	if err != nil {
-		return "", nil
+		return nil, nil
 	}
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	vaultDir := filepath.Join("vault", vaultID.String())
@@ -77,31 +78,37 @@ func (l *LocalStorage) Hold(ctx context.Context, attachment *uploader.Attachment
 	if os.IsNotExist(err) {
 		err = os.Mkdir(vaultDir, DIRECTORY_PERMISSIONS)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		fmt.Println("Directory created:", vaultDir)
 	} else {
-		return "", err
+		return nil, err
 	}
 
-	vaultPath := filepath.Join(vaultDir, attachment.FileName)
+	vaultPath := filepath.Join(vaultDir, file.Filename)
 	dst, err := os.Create(vaultPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer dst.Close()
 
-	if _, err = io.Copy(dst, attachment.Contents); err != nil {
-		return "", err
-	}
-
-	// Close attachment contents
-	err = attachment.Contents.Close()
+	contents, err := file.Open()
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	defer contents.Close()
+
+	if _, err = io.Copy(dst, contents); err != nil {
+		return nil, err
 	}
 
-	return vaultDir, nil
+	// TODO extract directory creation to function
+
+	attachment := uploader.NewAttachment(file, 1)
+
+	attachment.LocalPath = vaultPath
+
+	return attachment, nil
 }
 
 func (l *LocalStorage) Load(ctx context.Context, fileUID uuid.UUID) (*uploader.Attachment, error) {
@@ -113,7 +120,7 @@ func (l *LocalStorage) Delete(ctx context.Context, fileUID uuid.UUID) error {
 }
 
 // Save - Copies files from the vault path, encrypts them and then stores them as per the implementation
-func (l *LocalStorage) Save(ctx context.Context, vaultPath string, attachment *uploader.Attachment, key string) error {
+func (l *LocalStorage) Save(ctx context.Context, attachment *uploader.Attachment, key string) error {
 	finalPath := filepath.Join(l.directory, attachment.UID.String())
 
 	if _, err := os.Stat(finalPath); os.IsNotExist(err) {
@@ -121,32 +128,38 @@ func (l *LocalStorage) Save(ctx context.Context, vaultPath string, attachment *u
 			return err
 		}
 	} else if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
-	source, err := os.Open(vaultPath)
+	source, err := os.Open(attachment.LocalPath)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer source.Close()
 
 	encrypted, err := l.encryption.EncryptStream(ctx, source, key)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	fileName := l.newFileName(attachment.UID)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	uploadPath := filepath.Join(finalPath, fileName)
 	dst, err := os.Create(uploadPath)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer dst.Close()
 
 	if _, err = io.Copy(dst, encrypted); err != nil {
+		fmt.Println(err)
 		return err
 	}
 

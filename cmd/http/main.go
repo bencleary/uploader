@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bencleary/uploader"
 	"github.com/bencleary/uploader/internal/db"
@@ -24,7 +23,7 @@ func main() {
 		panic(err)
 	}
 
-	sqlite, err := db.NewSQLiteDatabase("filer.db")
+	sqlite, err := db.NewSQLiteDatabase("filer.sqlite")
 
 	if err != nil {
 		panic(err)
@@ -33,7 +32,6 @@ func main() {
 	sqlite.CreateTable()
 
 	filingService := db.NewSqliteFilerService(sqlite)
-	fmt.Println(filingService)
 
 	supportedMimeTypes := []string{"image/png", "image/gif", "image/jpeg"}
 	drawScaler := scaler.NewDrawImageScaler(supportedMimeTypes)
@@ -46,7 +44,7 @@ func main() {
 	previewService.Register("image/gif", imagePreviewGenerator)
 	previewService.Register("image/jpeg", imagePreviewGenerator)
 
-	server := http.NewServer(filingService, storageService, previewService)
+	server := http.NewServer(filingService, storageService, drawScaler, previewService)
 
 	server.Open()
 

@@ -84,3 +84,9 @@ Temporary Items
 # databases
 *.db
 *.sqlite
+
+
+# temporary directories
+
+temp/
+vault/

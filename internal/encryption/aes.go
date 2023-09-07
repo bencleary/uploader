@@ -1,6 +1,7 @@
 package encryption
 
 import (
+	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -21,13 +22,13 @@ type AES struct {
 	keystore uploader.KeyStoreService
 }
 
-func NewAESService(keystore uploader.KeyStoreService) AES {
-	return AES{
+func NewAESService(keystore uploader.KeyStoreService) *AES {
+	return &AES{
 		keystore: keystore,
 	}
 }
 
-func (a AES) encrypt(data []byte, key string) ([]byte, error) {
+func (a *AES) encrypt(data []byte, key string) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
@@ -47,7 +48,7 @@ func (a AES) encrypt(data []byte, key string) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func (a AES) decrypt(ciphertext []byte, key string) ([]byte, error) {
+func (a *AES) decrypt(ciphertext []byte, key string) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
@@ -72,9 +73,29 @@ func (a AES) decrypt(ciphertext []byte, key string) ([]byte, error) {
 	return plaintext, nil
 }
 
-func (a AES) EncryptStream(ctx context.Context, src io.Reader, key string) (io.ReadCloser, error) {
-	return nil, nil
+func (a *AES) EncryptStream(ctx context.Context, src io.Reader, key string) (io.ReadCloser, error) {
+	encryptedContent, err := io.ReadAll(src)
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedData, err := a.encrypt(encryptedContent, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewReader(encryptedData)), nil
 }
-func (a AES) DecryptStream(ctx context.Context, src io.Reader, ket string) (io.ReadCloser, error) {
-	return nil, nil
+func (a *AES) DecryptStream(ctx context.Context, src io.Reader, key string) (io.ReadCloser, error) {
+	decryptedContent, err := io.ReadAll(src)
+	if err != nil {
+		return nil, err
+	}
+
+	decryptedData, err := a.decrypt(decryptedContent, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewReader(decryptedData)), nil
 }

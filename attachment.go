@@ -10,7 +10,6 @@ import (
 
 type Attachment struct {
 	UID              uuid.UUID
-	Contents         multipart.File
 	OwnerID          int
 	FileName         string
 	FileSize         int64

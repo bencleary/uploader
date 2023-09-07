@@ -3,7 +3,7 @@ package uploader
 import "context"
 
 type PreviewGeneratorService interface {
-	Generate(ctx context.Context, attachment *Attachment) error
+	Generate(ctx context.Context, attachment *Attachment, previewWidth int) error
 }
 
 type PreviewService struct {
@@ -20,10 +20,10 @@ func (p *PreviewService) Register(name string, handler PreviewGeneratorService) 
 	p.handlers[name] = handler
 }
 
-func (p *PreviewService) Generate(ctx context.Context, attachment *Attachment) error {
+func (p *PreviewService) Generate(ctx context.Context, attachment *Attachment, previewWidth int) error {
 	handler, ok := p.handlers[attachment.MimeType]
 	if !ok {
 		return nil
 	}
-	return handler.Generate(ctx, attachment)
+	return handler.Generate(ctx, attachment, previewWidth)
 }

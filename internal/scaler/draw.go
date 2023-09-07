@@ -16,7 +16,9 @@ const (
 	JPEG = "image/jpeg"
 )
 
-var _ uploader.ScalerService = (*DrawImageScaler)(nil)
+var (
+	_ uploader.ScalerService = (*DrawImageScaler)(nil)
+)
 
 type DrawImageScaler struct {
 	supported []string
@@ -46,16 +48,16 @@ func getImageFormat(mimeType string) (uploader.ImageFormat, error) {
 	}
 
 	// If the MIME type does not match any of the cases, return nil for the format and error.
-	return nil, nil
+	return nil, uploader.Errorf(uploader.INVALID, "Unsupported image format: %s", mimeType)
 }
 
-func (d *DrawImageScaler) Scale(ctx context.Context, filePath string, targetWidth int) error {
-	format, err := getImageFormat("")
+func (d *DrawImageScaler) Scale(ctx context.Context, attachment *uploader.Attachment, targetWidth int) error {
+	format, err := getImageFormat(attachment.MimeType)
 	if err != nil {
 		return err
 	}
 	// Open input image file
-	input, err := os.Open(filePath)
+	input, err := os.Open(attachment.LocalPath)
 	if err != nil {
 		return err
 	}
@@ -77,7 +79,7 @@ func (d *DrawImageScaler) Scale(ctx context.Context, filePath string, targetWidt
 	targetHeight := int(float64(targetWidth) / aspectRatio)
 
 	// Create output image file
-	output, err := os.Create(filePath)
+	output, err := os.Create(attachment.LocalPath)
 	if err != nil {
 		return err
 	}
