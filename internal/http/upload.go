@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -17,8 +16,6 @@ func (s *Server) upload(c echo.Context) error {
 	// Encryption Key should be header
 	key := c.FormValue("key")
 
-	fmt.Println(key)
-
 	// Read file
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -31,16 +28,14 @@ func (s *Server) upload(c echo.Context) error {
 		return err
 	}
 
-	// Virus scanning
+	err = attachment.CopyFileToPath(attachment.CreatePreviewLocalPath())
 
-	// err := s.filer.Scan(filePath)
 	if err != nil {
-		// virus validation failed...
 		return err
 	}
 
 	if s.scaler.Supported(attachment.MimeType) {
-		err := s.scaler.Scale(context.Background(), attachment, MAX_IMAGE_WIDTH)
+		err := s.scaler.Scale(context.Background(), attachment.LocalPath, MAX_IMAGE_WIDTH, attachment.MimeType)
 		if err != nil {
 			return err
 		}

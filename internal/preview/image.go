@@ -19,5 +19,5 @@ func NewImagePreviewGenerator(scaler uploader.ScalerService) *ImagePreviewGenera
 }
 
 func (i *ImagePreviewGenerator) Generate(ctx context.Context, attachment *uploader.Attachment, previewWidth int) error {
-	return i.Scaler.Scale(ctx, attachment, previewWidth)
+	return i.Scaler.Scale(ctx, attachment.PreviewLocalPath, previewWidth, attachment.MimeType)
 }
