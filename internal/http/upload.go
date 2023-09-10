@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/context"
 )
@@ -41,14 +42,13 @@ func (s *Server) upload(c echo.Context) error {
 		}
 	}
 
-	// TODO - fix overwriting file, create new preview
 	err = s.preview.Generate(context.Background(), attachment, PREVIEW_WIDTH)
 
 	if err != nil {
 		return err
 	}
 
-	err = s.storage.Save(context.Background(), attachment, key)
+	err = s.storage.Upload(context.Background(), attachment, key)
 
 	if err != nil {
 		// writing files has failed
@@ -65,8 +65,28 @@ func (s *Server) upload(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"uid": attachment.UID.String()})
 }
 
-// func (s *Server) preview(c echo.Context) error {
-// 	// fetch attachment and return preview url
-// 	c.Response().Header().Set("Content-Type", "")
-// 	return nil
-// }
+func (s *Server) download(c echo.Context) error {
+	// Retrieve the file UID from the request parameter.
+	uid := c.Param("uid")
+	key := c.Request().Header.Get("key")
+
+	attachment, err := s.filer.Fetch(uuid.MustParse(uid))
+
+	if err != nil {
+		return err
+	}
+
+	// // Load the attachment by UID.
+	decrypted, err := s.storage.Download(c.Request().Context(), attachment, key)
+	if err != nil {
+		return err
+	}
+
+	contentType := attachment.MimeType
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	// Stream the file for download.
+	return c.Stream(http.StatusOK, contentType, decrypted)
+}

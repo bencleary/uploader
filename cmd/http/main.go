@@ -33,8 +33,8 @@ func main() {
 
 	filingService := db.NewSqliteFilerService(sqlite)
 
-	supportedMimeTypes := []string{"image/png", "image/gif", "image/jpeg"}
-	drawScaler := scaler.NewDrawImageScaler(supportedMimeTypes)
+	supportedImageScalerMimeTypes := []string{"image/png", "image/gif", "image/jpeg"}
+	drawScaler := scaler.NewDrawImageScaler(supportedImageScalerMimeTypes)
 
 	imagePreviewGenerator := preview.NewImagePreviewGenerator(drawScaler)
 

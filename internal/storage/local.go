@@ -7,27 +7,26 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/bencleary/uploader"
-
 	"github.com/google/uuid"
 )
 
-var _ uploader.StorageService = (*LocalStorage)(nil)
-
 const (
+	// DIRECTORY_PERMISSIONS represents the directory permission mode.
 	DIRECTORY_PERMISSIONS = 0755
 )
 
+// LocalStorage implements the uploader.StorageService interface for storing files locally.
 type LocalStorage struct {
 	directory  string
 	vault      string
 	encryption uploader.EncryptionService
 }
 
-// NewLocalStorageStrategy creates a new instance of the LocalStorage struct with the provided directory and encryption service.
+// NewLocalStorage creates a new instance of LocalStorage.
 func NewLocalStorage(uploadPath, vaultPath string, encryptionService uploader.EncryptionService) *LocalStorage {
-
 	if encryptionService == nil {
 		return nil
 	}
@@ -39,15 +38,11 @@ func NewLocalStorage(uploadPath, vaultPath string, encryptionService uploader.En
 	}
 }
 
-func (l *LocalStorage) newFileName(uid uuid.UUID) string {
-	return fmt.Sprintf("%s.enc", uid)
-}
-
+// Initialise creates the necessary directories if they don't exist.
 func (l *LocalStorage) Initialise(ctx context.Context) error {
 	directories := []string{l.directory, l.vault}
 	for _, dir := range directories {
 		_, err := os.Stat(dir)
-
 		if os.IsNotExist(err) {
 			err = os.Mkdir(dir, DIRECTORY_PERMISSIONS)
 			if err != nil {
@@ -55,33 +50,30 @@ func (l *LocalStorage) Initialise(ctx context.Context) error {
 			}
 			fmt.Println("Directory created:", dir)
 			return nil
-		} else {
+		} else if err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// Hold stores the uploaded file in the vault directory.
 func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*uploader.Attachment, error) {
 	vaultID, err := uuid.NewUUID()
-	if err != nil {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}
 
-	vaultDir := filepath.Join("vault", vaultID.String())
+	vaultDir := filepath.Join(l.vault, vaultID.String())
 
 	_, err = os.Stat(vaultDir)
-
 	if os.IsNotExist(err) {
 		err = os.Mkdir(vaultDir, DIRECTORY_PERMISSIONS)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Println("Directory created:", vaultDir)
-	} else {
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -102,66 +94,95 @@ func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*u
 		return nil, err
 	}
 
-	// TODO extract directory creation to function
-
 	attachment := uploader.NewAttachment(file, 1)
-
 	attachment.LocalPath = vaultPath
 
 	return attachment, nil
 }
 
-func (l *LocalStorage) Load(ctx context.Context, fileUID uuid.UUID) (*uploader.Attachment, error) {
-	return nil, nil
-}
-
-func (l *LocalStorage) Delete(ctx context.Context, fileUID uuid.UUID) error {
-	return nil
-}
-
-// Save - Copies files from the vault path, encrypts them and then stores them as per the implementation
-func (l *LocalStorage) Save(ctx context.Context, attachment *uploader.Attachment, key string) error {
-	finalPath := filepath.Join(l.directory, attachment.UID.String())
-
-	if _, err := os.Stat(finalPath); os.IsNotExist(err) {
-		if err := os.Mkdir(finalPath, DIRECTORY_PERMISSIONS); err != nil {
-			return err
-		}
-	} else if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	source, err := os.Open(attachment.LocalPath)
+// Load retrieves a file based on its unique identifier.
+func (l *LocalStorage) Download(ctx context.Context, attachment *uploader.Attachment, key string) (io.ReadCloser, error) {
+	storagePath := filepath.Join(l.directory, attachment.UID.String())
+	filePath := filepath.Join(storagePath, attachment.UID.String()) + ".enc"
+	source, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
+	}
+	defer source.Close()
+
+	decrypted, err := l.encryption.DecryptStream(ctx, source, key)
+	if err != nil {
+		return nil, err
+	}
+	defer decrypted.Close()
+
+	return decrypted, nil
+}
+
+// Delete removes a folder and its contents based on its unique identifier.
+func (l *LocalStorage) Delete(ctx context.Context, attachmentUID string) error {
+	return os.RemoveAll(filepath.Join(l.directory, attachmentUID))
+}
+
+// uploadFile encrypts and uploads a file.
+func (l *LocalStorage) uploadFile(ctx context.Context, destinationPath string, uid, filePath, key string) error {
+	source, err := os.Open(filePath)
+	if err != nil {
 		return err
 	}
 	defer source.Close()
 
 	encrypted, err := l.encryption.EncryptStream(ctx, source, key)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
-	fileName := l.newFileName(attachment.UID)
-	if err != nil {
-		fmt.Println(err)
-		return err
+	var fileName string
+	if strings.Contains(filePath, "preview") {
+		fileName = fmt.Sprintf("%s.preview.enc", uid)
+	} else {
+		fileName = fmt.Sprintf("%s.enc", uid)
 	}
-	uploadPath := filepath.Join(finalPath, fileName)
+
+	uploadPath := filepath.Join(destinationPath, fileName)
 	dst, err := os.Create(uploadPath)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer dst.Close()
 
 	if _, err = io.Copy(dst, encrypted); err != nil {
-		fmt.Println(err)
+		return err
+	}
+	return nil
+}
+
+// Upload encrypts and stores files in the specified directory.
+func (l *LocalStorage) Upload(ctx context.Context, attachment *uploader.Attachment, key string) error {
+	finalPath := filepath.Join(l.directory, attachment.UID.String())
+	err := getOrCreateDirectory(finalPath)
+	if err != nil {
 		return err
 	}
 
+	for _, filePath := range attachment.GetFilePaths() {
+		err := l.uploadFile(ctx, finalPath, attachment.UID.String(), filePath, key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getOrCreateDirectory creates the directory if it doesn't exist.
+func getOrCreateDirectory(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.Mkdir(path, DIRECTORY_PERMISSIONS); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
 	return nil
 }

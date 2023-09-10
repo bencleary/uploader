@@ -28,10 +28,30 @@ func (s *SqliteFiler) Record(attachment *uploader.Attachment) error {
 	return nil
 }
 
-func (s *SqliteFiler) Fetch(fileUID uuid.UUID) (*uploader.Upload, error) {
-	return nil, nil
+func (s *SqliteFiler) Fetch(fileUID uuid.UUID) (*uploader.Attachment, error) {
+	row := s.db.db.QueryRow(`
+		SELECT owner_id, file_name, file_size, extension, mime_type
+		FROM uploads
+		WHERE uuid = ?
+	`, fileUID.String())
+
+	attachment := &uploader.Attachment{UID: fileUID}
+
+	err := row.Scan(&attachment.OwnerID, &attachment.FileName, &attachment.FileSize, &attachment.Extension, &attachment.MimeType)
+	if err != nil {
+		return nil, err
+	}
+
+	return attachment, nil
 }
 
 func (s *SqliteFiler) Delete(fileUID uuid.UUID) error {
+	_, err := s.db.db.Exec(`
+		DELETE FROM uploads
+		WHERE uuid = ?
+	`, fileUID.String())
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -21,6 +21,10 @@ type Attachment struct {
 	PreviewLocalPath string
 }
 
+func (a *Attachment) GetFilePaths() []string {
+	return []string{a.LocalPath, a.PreviewLocalPath}
+}
+
 // CreatePreviewLocalPath adds .preview into the localpath befroe the file extenion
 func (a *Attachment) CreatePreviewLocalPath() string {
 	// Find the last dot (.) in the FileName

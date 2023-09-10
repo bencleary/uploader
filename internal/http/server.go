@@ -28,6 +28,7 @@ func NewServer(filer uploader.FilerService, storage uploader.StorageService, sca
 	}
 
 	server.http.POST("/file/upload", server.upload)
+	server.http.GET("/file/:uid", server.download)
 
 	return server
 }
