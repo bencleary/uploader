@@ -101,9 +101,16 @@ func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*u
 }
 
 // Load retrieves a file based on its unique identifier.
-func (l *LocalStorage) Download(ctx context.Context, attachment *uploader.Attachment, key string) (io.ReadCloser, error) {
+func (l *LocalStorage) Download(ctx context.Context, attachment *uploader.Attachment, preview bool, key string) (io.ReadCloser, error) {
 	storagePath := filepath.Join(l.directory, attachment.UID.String())
-	filePath := filepath.Join(storagePath, attachment.UID.String()) + ".enc"
+
+	var filePath string
+	if preview {
+		filePath = filepath.Join(storagePath, attachment.UID.String()) + ".preview.enc"
+	} else {
+		filePath = filepath.Join(storagePath, attachment.UID.String()) + ".enc"
+	}
+
 	source, err := os.Open(filePath)
 	if err != nil {
 		return nil, err

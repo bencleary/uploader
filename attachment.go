@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -90,4 +91,20 @@ func NewAttachment(file *multipart.FileHeader, requestUser int) *Attachment {
 		Extension: getFileExtension(file.Filename),
 		MimeType:  file.Header.Get("Content-Type"),
 	}
+}
+
+type Upload struct {
+	FileName    string    `json:"file_name"`
+	PreviewURL  string    `json:"preview_url"`
+	DownloadURL string    `json:"download_url"`
+	UploadedAt  time.Time `json:"uploaded_at"`
+}
+
+func NewUpload(attachment *Attachment, previewURL, downloadURL string) (*Upload, error) {
+	return &Upload{
+		FileName:    attachment.FileName,
+		PreviewURL:  previewURL,
+		DownloadURL: downloadURL,
+		UploadedAt:  time.Now(),
+	}, nil
 }

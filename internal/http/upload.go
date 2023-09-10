@@ -2,7 +2,9 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/bencleary/uploader"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/context"
@@ -62,13 +64,30 @@ func (s *Server) upload(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"uid": attachment.UID.String()})
+	tempURL := "http://" + c.Request().Host + "/file/" + attachment.UID.String()
+	tempPreviewURL := "http://" + c.Request().Host + "/file/" + attachment.UID.String() + "?preview=true"
+
+	upload, err := uploader.NewUpload(attachment, tempPreviewURL, tempURL)
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, upload)
 }
 
 func (s *Server) download(c echo.Context) error {
 	// Retrieve the file UID from the request parameter.
 	uid := c.Param("uid")
 	key := c.Request().Header.Get("key")
+	preview := c.QueryParam("preview")
+
+	var previewValue bool
+	previewValue, err := strconv.ParseBool(preview)
+
+	if err != nil {
+		previewValue = false
+	}
 
 	attachment, err := s.filer.Fetch(uuid.MustParse(uid))
 
@@ -77,7 +96,7 @@ func (s *Server) download(c echo.Context) error {
 	}
 
 	// // Load the attachment by UID.
-	decrypted, err := s.storage.Download(c.Request().Context(), attachment, key)
+	decrypted, err := s.storage.Download(c.Request().Context(), attachment, previewValue, key)
 	if err != nil {
 		return err
 	}
