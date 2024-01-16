@@ -1,35 +1,58 @@
-package encryption_test
+package encryption
 
 import (
 	"bytes"
 	"context"
 	"io"
 	"testing"
-
-	"github.com/bencleary/uploader/internal/encryption"
 )
 
 func TestNewAESService(t *testing.T) {
-	aes := encryption.NewAESService(nil)
+	aes := NewAESService(nil)
 	if aes == nil {
 		t.Fatal("expected aes service")
 	}
 
 }
 
-func TestAESServiceEncryptStream(t *testing.T) {
+func TestAESEncrypt(t *testing.T) {
 	key := "some-secret-key"
-	aes := encryption.NewAESService(nil)
-	data := bytes.NewBufferString("some-data")
-	_, err := aes.EncryptStream(context.Background(), data, key)
+	aes := NewAESService(nil)
+	_, err := aes.encrypt([]byte("some-data"), key)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
+func TestAESDecrypt(t *testing.T) {
+	key := "some-secret-key1"
+	aes := NewAESService(nil)
+	enc, err := aes.encrypt([]byte("some-data"), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec, err := aes.decrypt(enc, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(dec) != "some-data" {
+		t.Fatal("decrypted data does not match")
+	}
+}
+
+func TestAESServiceEncryptStream(t *testing.T) {
+	key := "some-secret-key"
+	aes := NewAESService(nil)
+	data := bytes.NewBufferString("some-data")
+	_, err := aes.EncryptStream(context.Background(), data, key)
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAESServiceDecryptStream(t *testing.T) {
 	key := "some-secret-key1"
-	aes := encryption.NewAESService(nil)
+	aes := NewAESService(nil)
 	data := bytes.NewBufferString("some-data")
 	enc, err := aes.EncryptStream(context.Background(), data, key)
 	if err != nil {
@@ -37,14 +60,14 @@ func TestAESServiceDecryptStream(t *testing.T) {
 	}
 	dec, err := aes.DecryptStream(context.Background(), enc, key)
 	if err != nil {
-		t.Fatal("expected error")
+		t.Fatal(err)
 	}
 	content, err := io.ReadAll(dec)
 	if err != nil {
-		t.Fatal("expected error")
+		t.Fatal(err)
 	}
 
 	if string(content) != "some-data" {
-		t.Fatal("expected data")
+		t.Fatal("decrypted data does not match")
 	}
 }
