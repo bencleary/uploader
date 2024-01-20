@@ -33,6 +33,6 @@ func NewServer(filer uploader.FilerService, storage uploader.StorageService, sca
 	return server
 }
 
-func (s *Server) Open() {
+func (s *Server) Start() {
 	s.http.Logger.Fatal(s.http.Start(":1323"))
 }

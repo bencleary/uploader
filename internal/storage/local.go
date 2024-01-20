@@ -100,7 +100,31 @@ func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*u
 	return attachment, nil
 }
 
-// Load retrieves a file based on its unique identifier.
+// Download retrieves an encrypted attachment from the local storage, decrypts it using the specified key,
+// and returns a ReadCloser for the decrypted content.
+//
+// Parameters:
+//   - ctx: The context.Context to control the execution flow and cancellation.
+//   - attachment: The uploader.Attachment representing the attachment to be downloaded.
+//   - preview: A boolean indicating whether to download the preview version of the attachment.
+//   - key: The encryption key used to decrypt the attachment.
+//
+// Returns:
+//   - io.ReadCloser: A ReadCloser providing access to the decrypted content of the attachment.
+//   - error: An error, if any, encountered during the download or decryption process.
+//
+// Example:
+//
+//	localStore := NewLocalStorage("/path/to/storage", encryptionProvider)
+//	attachment := &uploader.Attachment{UID: attachmentUID}
+//	key := "encryption_key"
+//	preview := false
+//	reader, err := localStore.Download(context.Background(), attachment, preview, key)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer reader.Close()
+//	Use the reader to access the decrypted content.
 func (l *LocalStorage) Download(ctx context.Context, attachment *uploader.Attachment, preview bool, key string) (io.ReadCloser, error) {
 	storagePath := filepath.Join(l.directory, attachment.UID.String())
 

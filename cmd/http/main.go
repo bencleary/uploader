@@ -46,6 +46,6 @@ func main() {
 
 	server := http.NewServer(filingService, storageService, drawScaler, previewService)
 
-	server.Open()
+	server.Start()
 
 }
