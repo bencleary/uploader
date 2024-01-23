@@ -41,16 +41,24 @@ Provides a rest api which enables files to be uploaded directly.
 
 `/file/:id`
 
+## Usage
 
+- Post method to file/upload
+- Request body is made up of file and key
+- key must be 16 bit
+- 
 
 ## Tasks
 
-- [ ] Better error messages
-- [ ] Key should be in header
-- [ ] Add tests
-- [ ] Add S3 storage
-- [ ] Add CLI interface
-- [ ] Godocs for methods
-- [ ] Replace ReadCloser with more generic interface
+- [ ] Better error messages in packages - 1
+- [ ] Genericise Filer - 2
+- [ ] Bring in user specific keys not encryption specific keys - 9
+- [x] Key should be in header
+- [ ] Add tests - 4
+- [ ] Add S3 storage - 5
+- [ ] Add CLI interface - 6
+- [ ] Godocs for methods - 8
+- [ ] Replace ReadCloser with more generic interface - 3
+- [ ] Implement queue for processing files - 7
 
 

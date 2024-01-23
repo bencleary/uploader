@@ -15,6 +15,7 @@ import (
 
 func main() {
 	keyService := keystore.NewInMemoryKeyStore()
+
 	encryptionService := encryption.NewAESService(keyService)
 	storageService := storage.NewLocalStorage("temp/", "vault/", encryptionService)
 	err := storageService.Initialise(context.Background())

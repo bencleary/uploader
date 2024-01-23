@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/bencleary/uploader"
@@ -17,57 +18,67 @@ const (
 
 func (s *Server) upload(c echo.Context) error {
 	// Encryption Key should be header
-	key := c.FormValue("key")
+	key := c.Request().Header.Get("key")
+
+	if key == "" {
+		return uploader.Errorf(uploader.INVALID, "")
+	}
 
 	// Read file
 	file, err := c.FormFile("file")
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusNoContent, "Reading file upload failed")
 	}
 
-	attachment, err := s.storage.Hold(context.Background(), file)
+	attachment, err := s.storage.Hold(c.Request().Context(), file)
 
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, "Storing uploaded file failed")
 	}
 
 	err = attachment.CopyFileToPath(attachment.CreatePreviewLocalPath())
 
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, "Storing uploaded file failed")
 	}
 
 	if s.scaler.Supported(attachment.MimeType) {
 		err := s.scaler.Scale(context.Background(), attachment.LocalPath, MAX_IMAGE_WIDTH, attachment.MimeType)
 		if err != nil {
-			return err
+			return echo.NewHTTPError(http.StatusInternalServerError, "Storing uploaded file failed")
 		}
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, "File type is not supported")
 	}
 
 	err = s.preview.Generate(context.Background(), attachment, PREVIEW_WIDTH)
 
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, "Processing uploaded file has failed, please try again.")
 	}
 
 	err = s.storage.Upload(context.Background(), attachment, key)
 
 	if err != nil {
 		// writing files has failed
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, "Processing uploaded file has failed, please try again.")
 	}
 
 	err = s.filer.Record(attachment)
 
 	if err != nil {
 		// writing files has failed
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, "Processing uploaded file has failed, please try again.")
 	}
 
-	tempURL := "http://" + c.Request().Host + "/file/" + attachment.UID.String()
-	tempPreviewURL := "http://" + c.Request().Host + "/file/" + attachment.UID.String() + "?preview=true"
+	tempURL := url.URL{
+		Scheme: "http",
+		Host:   c.Request().Host,
+		Path:   "/file/" + attachment.UID.String(),
+	}
+	tempPreviewURL := tempURL.String() + "?preview=true"
 
-	upload, err := uploader.NewUpload(attachment, tempPreviewURL, tempURL)
+	upload, err := uploader.NewUpload(attachment, tempPreviewURL, tempURL.String())
 
 	if err != nil {
 		return err
@@ -98,7 +109,8 @@ func (s *Server) download(c echo.Context) error {
 	// // Load the attachment by UID.
 	decrypted, err := s.storage.Download(c.Request().Context(), attachment, previewValue, key)
 	if err != nil {
-		return err
+		// return uploader.Errorf(uploader.INVALID, "Decryption failed")
+		return echo.NewHTTPError(echo.ErrBadRequest.Code, "Decryption failed")
 	}
 
 	contentType := attachment.MimeType
