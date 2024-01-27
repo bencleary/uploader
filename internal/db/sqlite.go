@@ -10,6 +10,10 @@ type DB struct {
 	db *sql.DB
 }
 
+// NewSQLiteDatabase creates a new instance of DB using an SQLite database file.
+//
+// dbPath: the path to the SQLite database file.
+// Returns a pointer to the DB instance and an error if any.
 func NewSQLiteDatabase(dbPath string) (*DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
