@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/bencleary/uploader"
+	middlewareValidator "github.com/bencleary/uploader/internal/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -18,6 +19,8 @@ func NewServer(filer uploader.FilerService, storage uploader.StorageService, sca
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	e.Use(middlewareValidator.ValidateEncryptionKey)
 
 	server := &Server{
 		http:    e,

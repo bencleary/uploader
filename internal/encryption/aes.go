@@ -28,6 +28,27 @@ func NewAESService(keystore uploader.KeyStoreService) *AES {
 	}
 }
 
+func IsValidKey(key string) bool {
+
+	if len(key) != 32 {
+		return false
+	}
+
+	_, err := aes.NewCipher([]byte(key))
+	if err != nil {
+		return false
+	}
+
+	firstChar := key[0]
+	for i := 1; i < len(key); i++ {
+		if key[i] != firstChar {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (a *AES) encrypt(data []byte, key string) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {

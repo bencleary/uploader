@@ -90,3 +90,12 @@ Temporary Items
 
 temp/
 vault/
+
+# local go caches (handy for sandboxed environments)
+.gocache/
+.gomodcache/
+.gopath/
+
+# legacy local test artifacts
+upload/
+**/upload/

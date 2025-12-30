@@ -1,64 +1,100 @@
-# File Upload Service
+# File Upload Service (Go)
 
-## Overview
+A small service that handles image uploads for an imaginary chat application: it stores encrypted files, creates a resized original + a preview image, and records upload metadata for later retrieval.
 
-A small service which can handle image uploads for an imaginary chat application. Based on the implementation discussed by [Code Aesthetic](https://www.youtube.com/watch?v=J1f5b4vcxCQ). In this video implementation is done leveraging TypeScript, as a learning exercise i wanted to implement it using another language and chose Go.
-
-### Assumptions
-
-- Only one storage engine is needed as the service runs, unlike the example which routes based on client ID.
-- The implementation assumes that user authentication has already been taken care of by another service.
-- JSON will be used as the response type.
+Inspired by [Code Aesthetic’s](https://www.youtube.com/watch?v=J1f5b4vcxCQ) “file upload service” walkthrough (the video uses TypeScript; this project is the Go implementation).
 
 ## Features
 
-- File encryption using AES ✅
-- Image resizing ✅
-- Preview generation ✅
-- Filing for historical access ✅
+- Upload images over HTTP
+- Resize originals (max width) + generate preview images
+- Encrypt stored files (AES-GCM)
+- Record metadata in SQLite for later downloads
 
-## Structure
+## Quickstart
 
-All files wituin the root directory are types used by the service in other layers of the application. Business logic is split throughout the layers of the application and is stiched to gether in the HTTP handler upload, and download. The internal directory holds the concreate implementations for these layers such as DB, http, etc.
+### Requirements
 
-The approach the application takes is to leverage dependancy inversion, dependency injection and the startegy pattern to make a flexible and extensible service.
+- Go 1.21+
+- A C toolchain (required by `github.com/mattn/go-sqlite3`)
 
-## CLI
+### Run the server
 
-Provides a CLI for uploading files on a adhoc basis
+```bash
+make server
+```
 
-## HTTP
+The server listens on `http://localhost:1323` and writes:
 
-Provides a rest api which enables files to be uploaded directly.
+- Metadata: `filer.sqlite`
+- Encrypted files: `temp/<upload-uuid>/...`
+- Working files: `vault/<vault-uuid>/...` (temporary)
 
-### Endpoints
+### Upload a file
 
-#### Upload
+The API requires an `key` header. It must be **32 characters** (AES-256 key material) and pass validation.
 
-`/file/upload`
+```bash
+KEY='0123456789abcdef0123456789abcdef'
+curl -sS \
+  -H "key: ${KEY}" \
+  -F "file=@./path/to/image.png" \
+  http://localhost:1323/file/upload
+```
 
-#### ID
+Response shape:
 
-`/file/:id`
+```json
+{
+  "file_name": "example.png",
+  "preview_url": "http://localhost:1323/file/<uid>?preview=true",
+  "download_url": "http://localhost:1323/file/<uid>",
+  "uploaded_at": "2025-01-01T00:00:00Z"
+}
+```
 
-## Usage
+### Download an original or preview
 
-- Post method to file/upload
-- Request body is made up of file and key
-- key must be 16 bit
-- 
+```bash
+UID='<uid-from-upload-response>'
+curl -sS -H "key: ${KEY}" "http://localhost:1323/file/${UID}" -o original.bin
+curl -sS -H "key: ${KEY}" "http://localhost:1323/file/${UID}?preview=true" -o preview.bin
+```
 
-## Tasks
+## API
 
-- [ ] Better error messages in packages - 1
-- [ ] Genericise Filer - 2
-- [ ] Bring in user specific keys not encryption specific keys - 9
-- [x] Key should be in header
-- [ ] Add tests - 4
-- [ ] Add S3 storage - 5
-- [ ] Add CLI interface - 6
-- [ ] Godocs for methods - 8
-- [ ] Replace ReadCloser with more generic interface - 3
-- [ ] Implement queue for processing files - 7
+- `POST /file/upload` (multipart form field: `file`)
+- `GET /file/:uid` (query: `preview=true|false`)
 
+More details: `docs/API.md`.
 
+## Project layout
+
+- Root package: interfaces and core types (`uploader.*`)
+- `internal/http`: Echo server + handlers
+- `internal/storage`: local storage backend
+- `internal/encryption`: AES-GCM encryption provider
+- `internal/scaler` + `internal/preview`: image scaling + preview generation
+- `internal/db`: SQLite-backed filer (metadata store)
+
+Architecture notes: `docs/ARCHITECTURE.md`.
+
+## Developer commands
+
+```bash
+make test
+make fmt
+make ci
+```
+
+## Notes / assumptions
+
+- This service assumes authentication/authorization is handled elsewhere; the encryption key is provided per-request.
+- Only common image types are supported today (`image/png`, `image/jpeg`, `image/gif`).
+
+## Roadmap
+
+- [ ] Finish CLI (`cmd/cli`)
+- [ ] Add S3 storage backend
+- [ ] Improve error responses + consistent JSON errors
+- [ ] Streaming encryption (avoid buffering whole files in memory)

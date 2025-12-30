@@ -49,7 +49,7 @@ func (l *LocalStorage) Initialise(ctx context.Context) error {
 				return err
 			}
 			fmt.Println("Directory created:", dir)
-			return nil
+			continue
 		} else if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func (l *LocalStorage) Hold(ctx context.Context, file *multipart.FileHeader) (*u
 
 	_, err = os.Stat(vaultDir)
 	if os.IsNotExist(err) {
-		err = os.Mkdir(vaultDir, DIRECTORY_PERMISSIONS)
+		err = os.MkdirAll(vaultDir, DIRECTORY_PERMISSIONS)
 		if err != nil {
 			return nil, err
 		}

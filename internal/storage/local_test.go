@@ -1,93 +1,99 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"image"
-	"image/color"
 	"image/png"
+	"io"
 	"mime/multipart"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/bencleary/uploader/internal/encryption"
 )
 
-func generateEmptyImage(name string, width, height int) {
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
+func createMultipartFileHeader(t *testing.T, fieldName, filename string, contents []byte) *multipart.FileHeader {
+	t.Helper()
 
-	// Fill the image with a transparent color
-	clearColor := color.RGBA{0, 0, 0, 0}
-	for x := 0; x < width; x++ {
-		for y := 0; y < height; y++ {
-			img.Set(x, y, clearColor)
-		}
-	}
-
-	// Create a file to save the image
-	file, err := os.Create("" + name + ".png")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile(fieldName, filename)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	defer file.Close()
+	if _, err := io.Copy(part, bytes.NewReader(contents)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	// Encode the image to PNG and write it to the file
-	err = png.Encode(file, img)
-	if err != nil {
-		panic(err)
+	req := httptest.NewRequest("POST", "http://example.com/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatal(err)
 	}
-}
 
-func cleanUpFiles(fileName string) {
-	if _, err := os.Stat(fileName); err == nil {
-		os.Remove("test.png")
+	files := req.MultipartForm.File[fieldName]
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file for %q, got %d", fieldName, len(files))
 	}
+	return files[0]
 }
 
 func TestLocalStorage(t *testing.T) {
 	aes := encryption.NewAESService(nil)
-	storage := NewLocalStorage("upload", "vault", aes)
+	uploadDir := t.TempDir()
+	vaultDir := t.TempDir()
+	storage := NewLocalStorage(uploadDir, vaultDir, aes)
 	if storage == nil {
 		t.Fatal("expected local storage")
 	}
 }
 
 func TestLocalStorageInitialise(t *testing.T) {
-	storage := NewLocalStorage("upload", "vault", nil)
+	aes := encryption.NewAESService(nil)
+	base := t.TempDir()
+	uploadDir := filepath.Join(base, "upload")
+	vaultDir := filepath.Join(base, "vault")
+	storage := NewLocalStorage(uploadDir, vaultDir, aes)
 	if err := storage.Initialise(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(uploadDir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(vaultDir); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestLocalStorageHold(t *testing.T) {
-
-	defer cleanUpFiles("temp/test.png")
-
 	aes := encryption.NewAESService(nil)
-	storage := NewLocalStorage("temp", "vault", aes)
+	uploadDir := t.TempDir()
+	vaultDir := t.TempDir()
+	storage := NewLocalStorage(uploadDir, vaultDir, aes)
 
-	generateEmptyImage("temp/test", 1, 1)
+	if err := storage.Initialise(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 
-	opened, err := os.Open("temp/test.png")
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	var pngBuffer bytes.Buffer
+	if err := png.Encode(&pngBuffer, img); err != nil {
+		t.Fatal(err)
+	}
+	fileHeader := createMultipartFileHeader(t, "file", "test.png", pngBuffer.Bytes())
 
+	attachment, err := storage.Hold(context.Background(), fileHeader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer opened.Close()
-
-	fileHeader := createFileHeader(opened)
-
-	if _, err := storage.Hold(context.Background(), fileHeader); err != nil {
+	if _, err := os.Stat(attachment.LocalPath); err != nil {
 		t.Fatal(err)
 	}
 
-}
-
-func createFileHeader(file *os.File) *multipart.FileHeader {
-	fileInfo, _ := file.Stat()
-	fileHeader := &multipart.FileHeader{
-		Filename: fileInfo.Name(),
-		Size:     fileInfo.Size(),
-		Header:   make(map[string][]string),
-	}
-	return fileHeader
 }
