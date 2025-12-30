@@ -1,7 +1,6 @@
 name: CI
 
 on:
-  push:
   pull_request:
 
 jobs:
@@ -14,6 +13,19 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Start MinIO
+        run: |
+          # Start MinIO and create bucket using docker-compose
+          UPLOADER_S3_BUCKET=uploader \
+          MINIO_ROOT_USER=minioadmin \
+          MINIO_ROOT_PASSWORD=minioadmin \
+          docker compose up -d minio minio-init
+          
+          # Wait for MinIO to be ready
+          echo "Waiting for MinIO to be ready..."
+          timeout 60 bash -c 'until curl -f http://localhost:9000/minio/health/live 2>/dev/null; do sleep 2; done'
+          echo "MinIO is ready!"
+
       - name: Format check
         run: |
           test -z "$(gofmt -l .)"
@@ -23,6 +35,14 @@ jobs:
           go vet ./...
 
       - name: Test
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
         run: |
           go test ./...
+
+      - name: Stop MinIO
+        if: always()
+        run: |
+          docker compose down
 

@@ -10,6 +10,7 @@ Inspired by [Code Aestheticâ€™s](https://www.youtube.com/watch?v=J1f5b4vcxCQ) â€
 - Resize originals (max width) + generate preview images
 - Encrypt stored files (AES-GCM)
 - Record metadata in SQLite for later downloads
+- Support for local filesystem or S3-compatible storage backends
 
 ## Quickstart
 
@@ -27,8 +28,10 @@ make server
 The server listens on `http://localhost:1323` and writes:
 
 - Metadata: `filer.sqlite`
-- Encrypted files: `temp/<upload-uuid>/...`
-- Working files: `vault/<vault-uuid>/...` (temporary)
+- Encrypted files: `temp/<upload-uuid>/...` (local storage) or S3 bucket (S3 storage)
+- Working files: `vault/<vault-uuid>/...` (temporary staging area)
+
+**Storage Backend:** By default, files are stored locally. To use S3-compatible storage (e.g., MinIO), set `UPLOADER_STORAGE=s3` and configure the S3 options. See `docs/LOCAL_S3.md` for details.
 
 ### Upload a file
 
@@ -73,7 +76,7 @@ Local S3 setup (MinIO): `docs/LOCAL_S3.md`.
 
 - Root package: interfaces and core types (`uploader.*`)
 - `internal/http`: Echo server + handlers
-- `internal/storage`: local storage backend
+- `internal/storage`: storage backends (local filesystem and S3-compatible)
 - `internal/encryption`: AES-GCM encryption provider
 - `internal/scaler` + `internal/preview`: image scaling + preview generation
 - `internal/db`: SQLite-backed filer (metadata store)
@@ -96,6 +99,6 @@ make ci
 ## Roadmap
 
 - [ ] Finish CLI (`cmd/cli`)
-- [ ] Add S3 storage backend
+- [x] Add S3 storage backend
 - [ ] Improve error responses + consistent JSON errors
 - [ ] Streaming encryption (avoid buffering whole files in memory)

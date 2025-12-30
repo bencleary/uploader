@@ -49,7 +49,7 @@ func skipIfS3Unavailable(t *testing.T) {
 		Endpoint:       "http://localhost:9000",
 		Bucket:         "uploader",
 		Region:         "us-east-1",
-		Prefix:         t.TempDir(),
+		Prefix:         "", // Use empty prefix for health check
 		ForcePathStyle: true,
 		AccessKeyID:    "minioadmin",
 		SecretKey:      "minioadmin",
