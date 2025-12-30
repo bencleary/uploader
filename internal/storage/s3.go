@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bencleary/uploader"
 )
@@ -22,6 +24,8 @@ type S3Options struct {
 	Region         string
 	Prefix         string
 	ForcePathStyle bool
+	AccessKeyID    string
+	SecretKey      string
 }
 
 type S3Storage struct {
@@ -46,7 +50,19 @@ func NewS3Storage(options *S3Options, encryption uploader.EncryptionService) *S3
 		return nil
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(options.Region))
+	// Build config options
+	configOpts := []func(*config.LoadOptions) error{
+		config.WithRegion(options.Region),
+	}
+
+	// Add static credentials if provided
+	if options.AccessKeyID != "" && options.SecretKey != "" {
+		configOpts = append(configOpts, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(options.AccessKeyID, options.SecretKey, ""),
+		))
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.Background(), configOpts...)
 	if err != nil {
 		return nil
 	}
@@ -119,6 +135,12 @@ func (s *S3Storage) uploadEncryptedFile(ctx context.Context, filePath, uid strin
 	}
 	defer encrypted.Close()
 
+	// Read encrypted data into a buffer to make it seekable for S3 retries
+	encryptedData, err := io.ReadAll(encrypted)
+	if err != nil {
+		return err
+	}
+
 	// Construct the S3 object key
 	objectKey := s.objectKey(uid, isPreview)
 
@@ -126,7 +148,7 @@ func (s *S3Storage) uploadEncryptedFile(ctx context.Context, filePath, uid strin
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.options.Bucket),
 		Key:    aws.String(objectKey),
-		Body:   encrypted,
+		Body:   bytes.NewReader(encryptedData),
 	})
 	if err != nil {
 		return err

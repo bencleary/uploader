@@ -33,6 +33,8 @@ func main() {
 			Region:         getEnv("UPLOADER_S3_REGION", "us-east-1"),
 			Prefix:         getEnv("UPLOADER_S3_PREFIX", ""),
 			ForcePathStyle: getEnvBool("UPLOADER_S3_FORCE_PATH_STYLE", true),
+			AccessKeyID:    getEnv("AWS_ACCESS_KEY_ID", ""),
+			SecretKey:      getEnv("AWS_SECRET_ACCESS_KEY", ""),
 		}
 
 		s3Storage := storage.NewS3Storage(s3Options, encryptionService)

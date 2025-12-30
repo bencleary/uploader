@@ -28,6 +28,8 @@ func createS3Storage(t *testing.T) *S3Storage {
 		Region:         "us-east-1",
 		Prefix:         prefix,
 		ForcePathStyle: true,
+		AccessKeyID:    "minioadmin",
+		SecretKey:      "minioadmin",
 	}, aes)
 
 	if storage == nil {
@@ -49,6 +51,8 @@ func skipIfS3Unavailable(t *testing.T) {
 		Region:         "us-east-1",
 		Prefix:         t.TempDir(),
 		ForcePathStyle: true,
+		AccessKeyID:    "minioadmin",
+		SecretKey:      "minioadmin",
 	}, aes)
 
 	if storage == nil {
@@ -72,6 +76,8 @@ func TestNewS3Storage(t *testing.T) {
 		Region:         "us-east-1",
 		Prefix:         prefix,
 		ForcePathStyle: true,
+		AccessKeyID:    "minioadmin",
+		SecretKey:      "minioadmin",
 	}, aes)
 
 	if storage == nil {
@@ -96,6 +102,8 @@ func TestNewS3Storage_NilEncryption(t *testing.T) {
 		Region:         "us-east-1",
 		Prefix:         t.TempDir(),
 		ForcePathStyle: true,
+		AccessKeyID:    "minioadmin",
+		SecretKey:      "minioadmin",
 	}, nil)
 
 	if storage != nil {
