@@ -1,23 +1,22 @@
 <template>
-  <div class="flex flex-col h-screen bg-zinc-50 dark:bg-zinc-950">
+  <div class="flex flex-col h-full w-full">
     <!-- Demo Warning Banner -->
     <UAlert
       v-if="isAuthenticated"
-      color="amber"
+      color="warning"
       variant="soft"
       icon="i-lucide-alert-triangle"
       title="Demo Environment"
       description="This is a demo authentication service. The encryption key is generated client-side and should not be used in production."
-      class="m-4 mb-0"
       :close-button="{ icon: 'i-lucide-x', color: 'amber', variant: 'link', 'aria-label': 'Close' }"
     />
 
     <!-- Login Section -->
     <div
       v-if="!isAuthenticated"
-      class="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900"
+      class="flex-1 w-full flex items-center justify-center p-6 bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900"
     >
-      <UCard class="max-w-md w-full shadow-xl border-zinc-200 dark:border-zinc-800">
+      <UCard class="w-full max-w-md bg-zinc-900 dark:bg-zinc-950 shadow-xl border-zinc-950 dark:border-zinc-900">
         <template #header>
           <div class="text-center">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 mb-4">
@@ -41,7 +40,7 @@
             :loading="isLoggingIn"
             block
             size="lg"
-            color="emerald"
+            color="primary"
             class="font-semibold"
           >
             <UIcon name="i-lucide-sparkles" class="w-5 h-5 mr-2" />
@@ -54,38 +53,42 @@
     <!-- Chat Interface -->
     <div
       v-else
-      class="flex-1 flex flex-col h-full max-w-4xl mx-auto w-full"
+      class="flex-1 flex flex-col h-full w-full overflow-hidden"
     >
       <!-- Header -->
-      <div class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <UIcon name="i-lucide-message-circle" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+      <div class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <UIcon name="i-lucide-message-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Chat</h1>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                Share images and messages
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 class="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Chat</h1>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400">Share images and messages</p>
+          <div class="flex gap-2">
+            <UButton
+              to="/uploads"
+              icon="i-lucide-images"
+              variant="ghost"
+              color="zinc"
+              size="lg"
+            >
+              Gallery
+            </UButton>
+            <UButton
+              @click="handleLogout"
+              icon="i-lucide-log-out"
+              variant="ghost"
+              color="zinc"
+              size="lg"
+            >
+              Logout
+            </UButton>
           </div>
-        </div>
-        <div class="flex gap-2">
-          <UButton
-            to="/uploads"
-            icon="i-lucide-images"
-            variant="ghost"
-            color="zinc"
-            size="lg"
-          >
-            Gallery
-          </UButton>
-          <UButton
-            @click="handleLogout"
-            icon="i-lucide-log-out"
-            variant="ghost"
-            color="zinc"
-            size="lg"
-          >
-            Logout
-          </UButton>
         </div>
       </div>
 
@@ -107,127 +110,50 @@
           </p>
         </div>
 
-        <div
-          v-for="message in messages"
+        <ChatMessage
+          v-for="message in Array.from(messages)"
           :key="message.id"
-          class="flex gap-4 group"
-        >
-          <UAvatar
-            :alt="'User'"
-            size="md"
-            class="ring-2 ring-emerald-500/20"
-          />
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="font-semibold text-sm text-zinc-900 dark:text-zinc-50">You</span>
-              <span class="text-xs text-zinc-500 dark:text-zinc-400">
-                {{ formatTime(message.timestamp) }}
-              </span>
-            </div>
-            <div
-              v-if="message.text"
-              class="inline-block px-4 py-2.5 rounded-2xl rounded-tl-sm bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm mb-2"
-            >
-              <p class="text-sm text-zinc-900 dark:text-zinc-50 whitespace-pre-wrap">{{ message.text }}</p>
-            </div>
-            <div
-              v-if="message.attachments && message.attachments.length > 0"
-              class="space-y-3"
-            >
-              <div
-                v-for="(attachment, idx) in message.attachments"
-                :key="idx"
-                class="relative group/image"
-              >
-                <div class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-md hover:shadow-lg transition-shadow">
-                  <img
-                    :src="getPreviewUrl(attachment)"
-                    :alt="attachment.file_name"
-                    class="max-w-sm max-h-80 object-cover w-full"
-                  />
-                </div>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 px-1">{{ attachment.file_name }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+          :message="{ ...message, attachments: message.attachments ? [...message.attachments] : undefined }"
+          :get-preview-url="getPreviewUrl"
+          @image-click="handleImageClick"
+        />
       </div>
 
       <!-- Input Area -->
-      <div class="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-4">
-        <form
-          @submit.prevent="handleSendMessage"
-          class="flex gap-3 items-end"
-        >
-          <div class="flex-1 relative">
-            <UInput
-              v-model="messageText"
-              placeholder="Type a message..."
-              :disabled="isUploading"
-              size="lg"
-              color="zinc"
-              :ui="{ rounded: 'rounded-xl' }"
-            />
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleFileSelect"
-            />
-          </div>
-          <UButton
-            type="button"
-            icon="i-lucide-paperclip"
-            variant="ghost"
-            color="zinc"
-            size="lg"
-            :disabled="isUploading"
-            @click="fileInput?.click()"
-            :ui="{ rounded: 'rounded-xl' }"
-          />
-          <UButton
-            type="submit"
-            :loading="isUploading"
-            :disabled="!messageText.trim() && !selectedFile"
-            color="emerald"
-            size="lg"
-            :ui="{ rounded: 'rounded-xl' }"
-          >
-            <UIcon name="i-lucide-send" class="w-4 h-4" />
-          </UButton>
-        </form>
-        <div
-          v-if="selectedFile"
-          class="mt-3 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-lg"
-        >
-          <UIcon name="i-lucide-file-image" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span class="text-sm text-emerald-900 dark:text-emerald-200 flex-1 truncate">{{ selectedFile.name }}</span>
-          <UButton
-            icon="i-lucide-x"
-            size="xs"
-            variant="ghost"
-            color="emerald"
-            @click="selectedFile = null"
-          />
-        </div>
-      </div>
+      <ChatInput
+        v-model:message-text="messageText"
+        :selected-file="selectedFile"
+        :is-uploading="isUploading"
+        @file-selected="handleFileSelect"
+        @clear-file="selectedFile = null"
+        @submit="handleSendMessage"
+      />
     </div>
+
+    <!-- Image Modal for chat images -->
+    <ImageModal
+      v-model="isImageModalOpen"
+      :image="selectedImage"
+      :on-download="handleImageDownload"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { UploadMetadata, UploadResponse } from '~/types/api'
+
 const { isAuthenticated, login, logout, getToken } = useAuth()
 const { sendMessage, messages } = useChat()
 const { uploadFile } = useUploadApi()
-const { addUpload } = useUploads()
+const { addUpload, getUploads } = useUploads()
 
 const messageText = ref('')
 const selectedFile = ref<File | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
 const isLoggingIn = ref(false)
 const isUploading = ref(false)
 const messagesContainer = ref<HTMLElement | null>(null)
+const isImageModalOpen = ref(false)
+const selectedImage = ref<UploadMetadata | null>(null)
 
 const handleLogin = async () => {
   isLoggingIn.value = true
@@ -246,16 +172,52 @@ const handleLogout = () => {
   selectedFile.value = null
 }
 
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    const file = target.files[0]
-    // Validate image type
-    if (file.type.startsWith('image/')) {
-      selectedFile.value = file
-    } else {
-      alert('Please select an image file')
+const handleFileSelect = (file: File) => {
+  selectedFile.value = file
+}
+
+const handleImageClick = async (attachment: UploadResponse) => {
+  // Extract UID from attachment URL
+  const uid = extractUidFromUrl(attachment.preview_url || attachment.download_url)
+  if (!uid) return
+
+  // Find the upload in our uploads list or create metadata from attachment
+  const { getUploads } = useUploads()
+  const uploads = getUploads()
+  let upload = uploads.find(u => u.uid === uid)
+
+  // If not found in uploads, create metadata from attachment
+  if (!upload) {
+    const token = getToken()
+    upload = {
+      uid,
+      fileName: attachment.file_name,
+      previewUrl: `/api/file/${uid}?preview=true${token ? `&key=${encodeURIComponent(token)}` : ''}`,
+      downloadUrl: `/api/file/${uid}${token ? `?key=${encodeURIComponent(token)}` : ''}`,
+      uploadedAt: attachment.uploaded_at
     }
+  }
+
+  selectedImage.value = upload
+  isImageModalOpen.value = true
+}
+
+const handleImageDownload = async (image: UploadMetadata) => {
+  const { getFile } = useUploadApi()
+  try {
+    const blob = await getFile(image.uid, false)
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = image.fileName
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  } catch (error) {
+    console.error('Download failed:', error)
+    alert('Failed to download file. Please try again.')
+    throw error
   }
 }
 
@@ -301,9 +263,6 @@ const handleSendMessage = async () => {
     } finally {
       isUploading.value = false
       selectedFile.value = null
-      if (fileInput.value) {
-        fileInput.value.value = ''
-      }
     }
   } else {
     sendMessage(messageText.value)
@@ -315,16 +274,19 @@ const handleSendMessage = async () => {
   })
 }
 
-const extractUidFromUrl = (url: string): string | null => {
+const extractUidFromUrl = (url: string | undefined | null): string | null => {
+  if (!url) return null
   const match = url.match(/\/file\/([^/?]+)/)
-  return match ? match[1] : null
+  return match ? (match[1] || null) : null
 }
 
-const getPreviewUrl = (attachment: any): string => {
+const getPreviewUrl = (attachment: UploadResponse): string => {
   const uid = extractUidFromUrl(attachment.preview_url || attachment.download_url)
   if (uid) {
     const token = getToken()
-    return `/api/file/${uid}?preview=true${token ? `&key=${encodeURIComponent(token)}` : ''}`
+    if (token) {
+      return `/api/file/${uid}?preview=true&key=${encodeURIComponent(token)}`
+    }
   }
   return attachment.preview_url || ''
 }
