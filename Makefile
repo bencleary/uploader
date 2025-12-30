@@ -1,6 +1,7 @@
 default: server
 
 .PHONY: server run test fmt fmtcheck vet ci clean
+.PHONY: s3-up s3-down
 
 GO ?= go
 
@@ -31,3 +32,9 @@ ci: fmtcheck vet test
 
 clean:
 	@rm -rf temp vault filer.sqlite .gocache .gomodcache .gopath
+
+s3-up:
+	@docker compose up -d minio minio-init
+
+s3-down:
+	@docker compose down

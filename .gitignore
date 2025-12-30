@@ -99,3 +99,6 @@ vault/
 # legacy local test artifacts
 upload/
 **/upload/
+
+# local env files
+.env

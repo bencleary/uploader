@@ -67,6 +67,7 @@ curl -sS -H "key: ${KEY}" "http://localhost:1323/file/${UID}?preview=true" -o pr
 - `GET /file/:uid` (query: `preview=true|false`)
 
 More details: `docs/API.md`.
+Local S3 setup (MinIO): `docs/LOCAL_S3.md`.
 
 ## Project layout
 
