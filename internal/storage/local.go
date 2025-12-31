@@ -139,15 +139,14 @@ func (l *LocalStorage) Download(ctx context.Context, attachment *uploader.Attach
 	if err != nil {
 		return nil, err
 	}
-	defer source.Close()
 
 	decrypted, err := l.encryption.DecryptStream(ctx, source, key)
 	if err != nil {
+		_ = source.Close()
 		return nil, err
 	}
-	defer decrypted.Close()
 
-	return decrypted, nil
+	return newChainedReadCloser(decrypted, decrypted, source), nil
 }
 
 // Delete removes a folder and its contents based on its unique identifier.

@@ -193,11 +193,11 @@ func (s *S3Storage) Download(ctx context.Context, attachment *uploader.Attachmen
 	// Decrypt the stream
 	decrypted, err := s.encryption.DecryptStream(ctx, result.Body, key)
 	if err != nil {
-		result.Body.Close()
+		_ = result.Body.Close()
 		return nil, err
 	}
 
-	return decrypted, nil
+	return newChainedReadCloser(decrypted, decrypted, result.Body), nil
 }
 
 func (s *S3Storage) Delete(ctx context.Context, attachmentUID string) error {
