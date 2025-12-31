@@ -1,60 +1,48 @@
-# Nuxt Starter Template
+# Uploader Demo UI (Nuxt)
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+A Nuxt UI “chat app” demo that exercises the Go upload service in the repo root.
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+## Requirements
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+- Node.js 20+
+- A running backend API (default: `http://localhost:1323`)
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-  </picture>
-</a>
+## Configuration
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+- `NUXT_PUBLIC_API_BASE_URL` (optional): backend base URL (default `http://localhost:1323`)
 
-## Quick Start
-
-```bash [Terminal]
-npm create nuxt@latest -- -t github:nuxt-ui-templates/starter
-```
-
-## Deploy your own
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
-
-## Setup
-
-Make sure to install the dependencies:
+Example:
 
 ```bash
-pnpm install
+NUXT_PUBLIC_API_BASE_URL=http://localhost:1323
 ```
 
-## Development Server
+## Run locally
 
-Start the development server on `http://localhost:3000`:
+From `apps/web`:
 
 ```bash
-pnpm dev
+npm ci
+npm run dev
 ```
 
-## Production
+Open `http://localhost:3000` and click **Start Demo Session**. This generates a demo encryption key client-side and stores it in `localStorage`. Uploading an image sends that key as the `key` header to the Go API.
 
-Build the application for production:
+## Scripts
 
 ```bash
-pnpm build
+npm test
 ```
 
-Locally preview production build:
+## Notes
+
+- This frontend is intentionally a demo environment. The `/api/auth/login` route just generates a random 32‑char key for local use.
+- File downloads/images go through a Nuxt server route (`/api/file/:uid`) so the browser can load images while still passing the key to the backend.
+
+Optional (extra checks):
 
 ```bash
-pnpm preview
+npm run typecheck
+npm run lint
+npm run lint -- --fix
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
