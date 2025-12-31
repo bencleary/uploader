@@ -1,7 +1,34 @@
+function firstQueryValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+  return value
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>
+    if (typeof record.message === 'string') {
+      return record.message
+    }
+  }
+  return 'Failed to fetch file'
+}
+
+function getErrorStatusCode(error: unknown): number {
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>
+    if (typeof record.statusCode === 'number') {
+      return record.statusCode
+    }
+  }
+  return 500
+}
+
 export default defineEventHandler(async (event) => {
   const uid = getRouterParam(event, 'uid')
   const query = getQuery(event)
-  const preview = query.preview === 'true'
+  const preview = firstQueryValue(query.preview as string | string[] | undefined) === 'true'
 
   if (!uid) {
     throw createError({
@@ -11,7 +38,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get the key from the request (should be passed as a query param or header)
-  const key = getHeader(event, 'key') || getQuery(event).key as string
+  const keyFromHeader = getHeader(event, 'key')
+  const keyFromQuery = firstQueryValue(query.key as string | string[] | undefined)
+  const key = keyFromHeader || keyFromQuery
 
   if (!key) {
     throw createError({
@@ -36,7 +65,7 @@ export default defineEventHandler(async (event) => {
       console.error(`Backend error (${response.status}):`, errorText)
       throw createError({
         statusCode: response.status,
-        message: `Failed to fetch file: ${response.statusText} - ${errorText}`
+        message: `Failed to fetch file: ${response.statusText}`
       })
     }
 
@@ -46,32 +75,28 @@ export default defineEventHandler(async (event) => {
     // Read the entire response body
     const buffer = await response.arrayBuffer()
     
-    // Log for debugging
-    console.log(`Fetched file: ${uid}, preview: ${preview}, size: ${buffer.byteLength} bytes, type: ${contentType}`)
-    
     // Check if we actually got data
-    if (buffer.byteLength === 0 || buffer.byteLength < 10) {
-      const errorText = new TextDecoder().decode(buffer.slice(0, 100))
-      console.error('Unexpected small response:', errorText)
+    if (buffer.byteLength === 0) {
       throw createError({
         statusCode: 500,
-        message: `Unexpected response from backend: ${errorText || 'empty or too small'}`
+        message: 'Unexpected empty response from backend'
       })
     }
 
     // Set headers - must be set before returning
     setHeader(event, 'Content-Type', contentType)
-    setHeader(event, 'Cache-Control', 'public, max-age=3600')
+    // Key can be provided via query param (e.g. <img src="...">), so never allow shared caching.
+    setHeader(event, 'Cache-Control', 'private, no-store')
+    setHeader(event, 'Pragma', 'no-cache')
 
     // Convert to Uint8Array for H3 compatibility
     // H3 should automatically detect binary data based on content-type
     return new Uint8Array(buffer)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Proxy error:', error)
     throw createError({
-      statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to fetch file'
+      statusCode: getErrorStatusCode(error),
+      message: getErrorMessage(error)
     })
   }
 })
-

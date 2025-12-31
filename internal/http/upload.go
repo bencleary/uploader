@@ -99,8 +99,12 @@ func (s *Server) download(c echo.Context) error {
 		previewValue = false
 	}
 
-	// TODO: Implement validation for UUID as Must Parse panics...
-	attachment, err := s.filer.Fetch(uuid.MustParse(uid))
+	parsedUID, err := uuid.Parse(uid)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid UID")
+	}
+
+	attachment, err := s.filer.Fetch(parsedUID)
 
 	if err != nil {
 		return err

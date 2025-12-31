@@ -28,7 +28,17 @@ jobs:
 
       - name: Format check
         run: |
-          test -z "$(gofmt -l .)"
+          unformatted=$(gofmt -l $(find . -name '*.go' \
+            -not -path './.gocache/*' \
+            -not -path './.gomodcache/*' \
+            -not -path './.gopath/*'))
+          if [ -n "$unformatted" ]; then
+            echo "The following files need formatting:"
+            echo "$unformatted"
+            echo ""
+            echo "Run 'make fmt' to fix formatting issues."
+            exit 1
+          fi
 
       - name: Vet
         run: |
