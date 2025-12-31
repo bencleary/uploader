@@ -1,29 +1,8 @@
 <template>
   <div class="h-full w-full overflow-y-auto">
         <!-- Demo Warning Banner -->
-        <UAlert
-      color="warning"
-      variant="soft"
-      icon="i-lucide-alert-triangle"
-      title="Demo Environment"
-      description="This is a demo authentication service. The encryption key is generated client-side and should not be used in production."
-      class=""
-      :close-button="{ icon: 'i-lucide-x', color: 'amber', variant: 'link', 'aria-label': 'Close' }"
-    />
-    <!-- Header -->
-    <div class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <UIcon name="i-lucide-images" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Gallery</h1>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-              {{ uploads.length }} {{ uploads.length === 1 ? 'image' : 'images' }}
-            </p>
-          </div>
-        </div>
+    <Header title="Gallery" icon="i-lucide-images" @logout="">
+      <template #actions>
         <UButton
           to="/"
           icon="i-lucide-arrow-left"
@@ -33,11 +12,23 @@
         >
           Back to Chat
         </UButton>
-      </div>
+      </template>
+    </Header>
+
+    <div class="p-4">
+      <UAlert
+      color="warning"
+      variant="soft"
+      icon="i-lucide-alert-triangle"
+      title="Demo Environment"
+      description="This is a demo authentication service. The encryption key is generated client-side and should not be used in production."
+      class=""
+      :close-button="{ icon: 'i-lucide-x', color: 'amber', variant: 'link', 'aria-label': 'Close' }"
+    />
     </div>
 
     <!-- Content -->
-    <div class="px-6 py-8">
+    <div class="px-4 py-4">
       <!-- Empty State -->
       <div
         v-if="uploads.length === 0"

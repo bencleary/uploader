@@ -11,8 +11,9 @@
           placeholder="Type a message..."
           :disabled="isUploading"
           size="lg"
-          color="zinc"
-          :ui="{ root: 'rounded-xl' }"
+          color="neutral"
+          class="w-full"
+          :ui="{ base: 'rounded-md bg-zinc-50 dark:bg-zinc-900' }"
         />
         <input
           ref="fileInput"
@@ -26,27 +27,27 @@
         type="button"
         icon="i-lucide-paperclip"
         variant="ghost"
-        color="zinc"
+        color="neutral"
         size="lg"
         :disabled="isUploading"
         @click="fileInput?.click()"
-        :ui="{ root: 'rounded-xl' }"
+        :ui="{ base: 'rounded-xl' }"
       />
       <UButton
         type="submit"
         :loading="isUploading"
         :disabled="!messageText.trim() && !selectedFile"
-        color="emerald"
+        color="primary"
         size="lg"
-        :ui="{ root: 'rounded-xl' }"
+        :ui="{ base: 'rounded-xl' }"
       >
         <UIcon name="i-lucide-send" class="w-4 h-4" />
       </UButton>
     </form>
     <div
-      v-if="selectedFile"
+      v-if="selectedFile || isUploading"
       :class="[
-        'mt-3 flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors',
+        'mt-3 flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors relative overflow-hidden',
         isUploading
           ? 'bg-emerald-100 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
           : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
@@ -55,13 +56,21 @@
       <UIcon
         :name="isUploading ? 'i-lucide-loader-2' : 'i-lucide-file-image'"
         :class="[
-          'w-4 h-4 text-emerald-600 dark:text-emerald-400',
+          'w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0',
           isUploading && 'animate-spin'
         ]"
       />
-      <span class="text-sm text-emerald-900 dark:text-emerald-200 flex-1 truncate">{{ selectedFile.name }}</span>
+      <span class="text-sm text-emerald-900 dark:text-emerald-200 flex-1 truncate">
+        {{ selectedFile?.name || 'Uploading...' }}
+      </span>
+      <span
+        v-if="isUploading"
+        class="text-xs text-emerald-700 dark:text-emerald-300 shrink-0"
+      >
+        Uploading...
+      </span>
       <UButton
-        v-if="!isUploading"
+        v-if="selectedFile && !isUploading"
         icon="i-lucide-x"
         size="xs"
         variant="ghost"

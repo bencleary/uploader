@@ -3,36 +3,57 @@ import type { ChatMessage, UploadResponse } from '~/types/api'
 const STORAGE_KEY = 'uploader_chat_messages'
 
 export const useChat = () => {
-  const messages = useState<ChatMessage[]>('chat_messages', () => {
-    if (import.meta.client) {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          return parsed.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        } catch {
-          return []
-        }
-      }
-    }
-    return []
-  })
+  const messages = useState<ChatMessage[]>('chat_messages', () => [])
+  const { get, set, remove } = useIndexedDB()
+  const isLoaded = useState<boolean>('chat_messages_loaded', () => false)
 
-  const sendMessage = (text: string, attachments?: UploadResponse[]): void => {
+  const loadMessages = async (): Promise<void> => {
+    if (!import.meta.client || isLoaded.value) {
+      return
+    }
+
+    try {
+      const stored = await get<ChatMessage[]>(STORAGE_KEY)
+      if (stored) {
+        messages.value = stored.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      }
+      isLoaded.value = true
+    } catch (error) {
+      console.error('Failed to load messages from IndexedDB:', error)
+      isLoaded.value = true
+    }
+  }
+
+  // Auto-load messages on client-side
+  if (import.meta.client && !isLoaded.value) {
+    loadMessages()
+  }
+
+  const sendMessage = async (text: string, attachments?: UploadResponse[]): Promise<void> => {
     const message: ChatMessage = {
       id: crypto.randomUUID(),
       text,
       timestamp: new Date(),
-      attachments
+      attachments,
+      isFromUser: true // User messages are from the current user
     }
 
+    // Optimistic update
     messages.value.push(message)
 
+    // Persist to IndexedDB
     if (import.meta.client) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.value))
+      try {
+        await set(STORAGE_KEY, messages.value)
+      } catch (error) {
+        console.error('Failed to save message to IndexedDB:', error)
+        // Rollback on error
+        messages.value = messages.value.filter(m => m.id !== message.id)
+        throw error
+      }
     }
   }
 
@@ -40,10 +61,18 @@ export const useChat = () => {
     return messages.value
   }
 
-  const clearMessages = (): void => {
+  const clearMessages = async (): Promise<void> => {
+    // Optimistic update
     messages.value = []
+
+    // Remove from IndexedDB
     if (import.meta.client) {
-      localStorage.removeItem(STORAGE_KEY)
+      try {
+        await remove(STORAGE_KEY)
+      } catch (error) {
+        console.error('Failed to clear messages from IndexedDB:', error)
+        throw error
+      }
     }
   }
 
@@ -51,7 +80,8 @@ export const useChat = () => {
     messages: readonly(messages),
     sendMessage,
     getMessages,
-    clearMessages
+    clearMessages,
+    loadMessages
   }
 }
 

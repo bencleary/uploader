@@ -1,6 +1,30 @@
 <template>
   <div class="flex flex-col h-full w-full">
+
+    <Header title="Chat" icon="i-lucide-message-circle" @logout="handleLogout">
+      <template #actions>
+      <UButton
+              to="/uploads"
+              icon="i-lucide-images"
+              variant="ghost"
+              color="neutral"
+              size="lg"
+            >
+              <span class="hidden md:block">Gallery</span>
+            </UButton>
+            <UButton
+              @click="handleLogout"
+              icon="i-lucide-log-out"
+              variant="ghost"
+              color="neutral"
+              size="lg"
+            >
+              <span class="hidden md:block">Logout</span>
+            </UButton>
+      </template>
+    </Header>
     <!-- Demo Warning Banner -->
+     <div class="p-4">
     <UAlert
       v-if="isAuthenticated"
       color="warning"
@@ -10,6 +34,7 @@
       description="This is a demo authentication service. The encryption key is generated client-side and should not be used in production."
       :close-button="{ icon: 'i-lucide-x', color: 'amber', variant: 'link', 'aria-label': 'Close' }"
     />
+    </div>
 
     <!-- Login Section -->
     <div
@@ -56,41 +81,7 @@
       class="flex-1 flex flex-col h-full w-full overflow-hidden"
     >
       <!-- Header -->
-      <div class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shrink-0">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <UIcon name="i-lucide-message-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Chat</h1>
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                Share images and messages
-              </p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <UButton
-              to="/uploads"
-              icon="i-lucide-images"
-              variant="ghost"
-              color="zinc"
-              size="lg"
-            >
-              Gallery
-            </UButton>
-            <UButton
-              @click="handleLogout"
-              icon="i-lucide-log-out"
-              variant="ghost"
-              color="zinc"
-              size="lg"
-            >
-              Logout
-            </UButton>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- Messages -->
       <div
@@ -242,7 +233,7 @@ const handleSendMessage = async () => {
         const previewUrl = `/api/file/${uid}?preview=true${token ? `&key=${encodeURIComponent(token)}` : ''}`
         const downloadUrl = `/api/file/${uid}${token ? `?key=${encodeURIComponent(token)}` : ''}`
         
-        addUpload({
+        await addUpload({
           uid,
           fileName: uploadResponse.file_name,
           previewUrl,
@@ -251,7 +242,7 @@ const handleSendMessage = async () => {
         })
       }
 
-      sendMessage(
+      await sendMessage(
         messageText.value || `Uploaded ${uploadResponse.file_name}`,
         [uploadResponse]
       )
@@ -265,7 +256,7 @@ const handleSendMessage = async () => {
       selectedFile.value = null
     }
   } else {
-    sendMessage(messageText.value)
+    await sendMessage(messageText.value)
   }
 
   messageText.value = ''

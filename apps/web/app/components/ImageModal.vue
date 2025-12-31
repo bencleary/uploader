@@ -11,11 +11,12 @@
         class="flex flex-col items-center bg-zinc-50 dark:bg-zinc-900 p-6 relative min-h-[400px]"
       >
         <img
+          ref="imageElement"
           :src="image.downloadUrl"
           :alt="image.fileName"
           class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-lg"
-          @load="isImageLoading = false"
-          @error="isImageLoading = false; isImageError = true"
+          @load="handleImageLoad"
+          @error="handleImageError"
         />
         <div
           v-if="isImageLoading"
@@ -84,16 +85,56 @@ const emit = defineEmits<{
 const isDownloading = ref(false)
 const isImageLoading = ref(true)
 const isImageError = ref(false)
+const imageElement = ref<HTMLImageElement | null>(null)
 
 const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
+const checkImageLoaded = () => {
+  nextTick(() => {
+    if (imageElement.value) {
+      if (imageElement.value.complete && imageElement.value.naturalHeight !== 0) {
+        // Image is already loaded (cached)
+        isImageLoading.value = false
+        isImageError.value = false
+      } else if (imageElement.value.complete && imageElement.value.naturalHeight === 0) {
+        // Image failed to load
+        isImageLoading.value = false
+        isImageError.value = true
+      }
+      // If not complete, wait for @load or @error event
+    }
+  })
+}
+
+const handleImageLoad = () => {
+  isImageLoading.value = false
+  isImageError.value = false
+}
+
+const handleImageError = () => {
+  isImageLoading.value = false
+  isImageError.value = true
+}
+
+watch(() => props.modelValue, (isOpen) => {
+  if (isOpen && props.image) {
+    // Reset loading state when modal opens
+    isImageLoading.value = true
+    isImageError.value = false
+    // Check if image is already loaded (cached)
+    checkImageLoaded()
+  }
+})
+
 watch(() => props.image, (image) => {
   if (image) {
     isImageLoading.value = true
     isImageError.value = false
+    // Check if image is already loaded (cached) after src updates
+    checkImageLoaded()
   }
 })
 

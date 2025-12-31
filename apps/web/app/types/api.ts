@@ -15,6 +15,7 @@ export interface ChatMessage {
   text: string
   timestamp: Date
   attachments?: UploadResponse[]
+  isFromUser?: boolean // true for user messages (left), false/undefined for other users (right)
 }
 
 export interface UploadMetadata {
