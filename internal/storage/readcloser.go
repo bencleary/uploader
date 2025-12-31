@@ -30,4 +30,3 @@ func (c *chainedReadCloser) Close() error {
 	}
 	return firstErr
 }
-
