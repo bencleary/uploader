@@ -19,6 +19,11 @@ func NewServer(filer uploader.FilerService, storage uploader.StorageService, sca
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"localhost"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"*"},
+	}))
 
 	e.Use(middlewareValidator.ValidateEncryptionKey)
 

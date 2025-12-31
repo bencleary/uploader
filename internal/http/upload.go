@@ -8,7 +8,6 @@ import (
 	"github.com/bencleary/uploader"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -43,7 +42,7 @@ func (s *Server) upload(c echo.Context) error {
 	}
 
 	if s.scaler.Supported(attachment.MimeType) {
-		err := s.scaler.Scale(context.Background(), attachment.LocalPath, MAX_IMAGE_WIDTH, attachment.MimeType)
+		err := s.scaler.Scale(c.Request().Context(), attachment.LocalPath, MAX_IMAGE_WIDTH, attachment.MimeType)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Storing uploaded file failed")
 		}
@@ -51,13 +50,13 @@ func (s *Server) upload(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "File type is not supported")
 	}
 
-	err = s.preview.Generate(context.Background(), attachment, PREVIEW_WIDTH)
+	err = s.preview.Generate(c.Request().Context(), attachment, PREVIEW_WIDTH)
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Processing uploaded file has failed, please try again.")
 	}
 
-	err = s.storage.Upload(context.Background(), attachment, key)
+	err = s.storage.Upload(c.Request().Context(), attachment, key)
 
 	if err != nil {
 		// writing files has failed
@@ -100,6 +99,7 @@ func (s *Server) download(c echo.Context) error {
 		previewValue = false
 	}
 
+	// TODO: Implement validation for UUID as Must Parse panics...
 	attachment, err := s.filer.Fetch(uuid.MustParse(uid))
 
 	if err != nil {
