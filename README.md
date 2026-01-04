@@ -1,3 +1,6 @@
+[![Go 1.21+](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # File Upload Service (Go)
 
 A small service that handles image uploads for an imaginary chat application: it stores encrypted files, creates a resized original + a preview image, and records upload metadata for later retrieval.
